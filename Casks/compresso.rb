@@ -18,7 +18,7 @@ cask "compresso" do
   depends_on macos: ">= :ventura" # macOS 13
 
   postflight do
-    system "xattr -dr com.apple.quarantine #{appdir}/CompressO.app"
+    system "xattr -cr com.apple.quarantine #{appdir}/CompressO.app"
   end
 
   app "CompressO.app"
