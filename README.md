@@ -1,0 +1,1 @@
+# Homebrew tap for [CompressO](https://github.com/codeforreal1/compressO)
