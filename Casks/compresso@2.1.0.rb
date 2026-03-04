@@ -1,5 +1,5 @@
 # AUTO-GENERATED FILE. DO NOT EDIT!
-cask "compresso" do
+cask "compresso@2.1.0" do
   version "2.1.0"
 
   on_arm do
