@@ -42,20 +42,35 @@ jobs:
           echo "Version: $version"
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
-      - name: Download the DMGs
+      # The SHA256 GitHub keeps for each release file (the files Homebrew downloads); a DMG is only
+      # downloaded & hashed here if GitHub has none for it (files uploaded before mid-2025)
+      - name: Read the checksums
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download "$VERSION" -R "$APP_REPO" -D dmgs \
-            -p "CompressO_${VERSION}_aarch64.dmg" -p "CompressO_${VERSION}_x64.dmg"
-          ls -l dmgs
+          assets=$(gh api "repos/$APP_REPO/releases/tags/$VERSION" --jq '.assets')
+          for arch in aarch64 x64; do
+            name="CompressO_${VERSION}_${arch}.dmg"
+            digest=$(echo "$assets" | jq -r --arg name "$name" '.[] | select(.name == $name) | .digest // "none"')
+            if [ -z "$digest" ]; then
+              echo "::error::$name is not in the $VERSION release."
+              exit 1
+            fi
+            if [ "$digest" = none ]; then
+              echo "GitHub has no SHA256 for $name, downloading it"
+              gh release download "$VERSION" -R "$APP_REPO" -D dmgs -p "$name"
+              sha256=$(sha256sum "dmgs/$name" | cut -d ' ' -f 1)
+            else
+              sha256=${digest#sha256:}
+            fi
+            echo "$name: $sha256"
+            echo "SHA256_$arch=$sha256" >> "$GITHUB_ENV"
+          done
 
       - name: Write the casks
         run: |
-          arm64=$(sha256sum "dmgs/CompressO_${VERSION}_aarch64.dmg" | cut -d ' ' -f 1)
-          x64=$(sha256sum "dmgs/CompressO_${VERSION}_x64.dmg" | cut -d ' ' -f 1)
-          echo "Apple Silicon: $arm64"
-          echo "Intel: $x64"
+          arm64=$SHA256_aarch64
+          x64=$SHA256_x64
           sed -e "s/{{VERSION}}/$VERSION/g" -e "s/{{ARM64_SHA256}}/$arm64/g" -e "s/{{X64_SHA256}}/$x64/g" \
             templates/compresso.rb.template > Casks/compresso.rb
           sed "s/cask \"compresso\"/cask \"compresso@$VERSION\"/" Casks/compresso.rb \
