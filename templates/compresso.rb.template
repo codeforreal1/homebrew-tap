@@ -28,6 +28,9 @@ cask "compresso" do
   end
 
   app "CompressO.app"
+  # The command line tool (4.1.0 and later), as `compresso`; inside the app it is `compresso-cli`,
+  # as `compresso` would clash with the app's `compressO` on a case-insensitive disk
+  binary "#{appdir}/CompressO.app/Contents/MacOS/compresso-cli", target: "compresso"
 
   zap trash: [
     "~/Library/Application Support/com.compresso.app",
